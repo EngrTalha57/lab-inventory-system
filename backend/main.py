@@ -59,13 +59,19 @@ def startup_populate():
         db.close()
 
 # ==========================================
-#  CORS CONFIGURATION
+#  CORS CONFIGURATION (Security Fix)
 # ==========================================
+
+origins = [
+    "http://localhost:5173",  # For local testing
+    "http://localhost:3000",
+    "https://lab-inventory-system-nu.vercel.app" # <--- YOUR VERCEL APP URL
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=origins,  # We use the specific list, NOT ["*"]
     allow_credentials=True,
-    allow_methods=["*"], 
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
