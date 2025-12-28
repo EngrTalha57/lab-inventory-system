@@ -3,26 +3,42 @@ import os
 from PyInstaller.utils.hooks import collect_all
 
 # --- PATH DEFINITIONS ---
-# Direct path to your Python 3.11 DLLs where you found libcrypto and libffi
 python_dll_path = r'C:\Users\Talha Mushtaq\AppData\Local\Programs\Python\Python311\DLLs'
 
-datas = [('dist', 'dist')]
+# ✅ FIX: Include all backend scripts so they are found at runtime
+datas = [
+    ('dist', 'dist'),
+    ('main.py', '.'),
+    ('models.py', '.'),
+    ('schemas.py', '.'),
+    ('crud.py', '.'),
+    ('database.py', '.'),
+    ('init_db.py', '.'),
+    ('routes', 'routes'), # Include the routes folder
+]
 
 # --- BINARY FIX SECTION ---
-# Explicitly adding SSL and CTYPES binaries to the build
 binaries = [
-    # SSL Binaries
     (os.path.join(python_dll_path, 'libcrypto-1_1.dll'), '.'),
     (os.path.join(python_dll_path, 'libssl-1_1.dll'), '.'),
     (os.path.join(python_dll_path, '_ssl.pyd'), '.'),
-    # CTYPES Binaries (Fixes the current error)
     (os.path.join(python_dll_path, '_ctypes.pyd'), '.'),
     (os.path.join(python_dll_path, 'libffi-8.dll'), '.'),
 ]
 
-hiddenimports = ['main']
+# ✅ FIX: Add critical backend dependencies to hiddenimports
+hiddenimports = [
+    'main',
+    'models',
+    'database',
+    'crud',
+    'schemas',
+    'init_db',
+    'sqlalchemy.sql.default_comparator',
+    'passlib.handlers.bcrypt',
+]
 
-# Collect all uvicorn dependencies for bundling
+# Collect uvicorn dependencies
 tmp_ret = collect_all('uvicorn')
 datas += tmp_ret[0]
 binaries += tmp_ret[1]
@@ -30,7 +46,7 @@ hiddenimports += tmp_ret[2]
 
 a = Analysis(
     ['run_server.py'],
-    pathex=[python_dll_path],
+    pathex=[python_dll_path, '.'], # Added current directory to path
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
@@ -54,7 +70,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False, 
+    console=True, # ✅ Set to True temporarily to see any startup errors
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

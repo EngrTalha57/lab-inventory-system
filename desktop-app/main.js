@@ -7,7 +7,6 @@ let splash;
 let backendProcess;
 
 function createWindow() {
-  // Define the icon path once for re-use
   const iconPath = path.join(__dirname, 'icon.ico');
 
   // 1. Create the Splash Screen Window
@@ -20,7 +19,7 @@ function createWindow() {
     center: true,      
     resizable: false,
     hasShadow: true,
-    icon: iconPath // Shows icon on taskbar while splash is active
+    icon: iconPath 
   });
   
   splash.loadFile(path.join(__dirname, 'splash.png'));
@@ -31,50 +30,62 @@ function createWindow() {
     height: 800,
     title: "T&AS Inventory System",
     autoHideMenuBar: true,
-    show: false, 
-    icon: iconPath, // Shows icon on taskbar and window corner
+    show: false, // Prevents white flash during initial load
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
     }
   });
 
-  // Attempt to load the server
-  mainWindow.loadURL('http://127.0.0.1:8000');
+  // Recursive retry logic to wait for the backend server
+  const loadURLWithRetry = () => {
+    mainWindow.loadURL('http://127.0.0.1:8000').catch(() => {
+      console.log("Backend not ready yet, retrying in 1 second...");
+      setTimeout(loadURLWithRetry, 1000); 
+    });
+  };
 
-  // Logic to handle backend startup delay
-  mainWindow.webContents.on('did-fail-load', () => {
-    console.log("Backend not ready, retrying...");
-    setTimeout(() => {
-      mainWindow.loadURL('http://127.0.0.1:8000');
-    }, 1000); 
-  });
+  loadURLWithRetry();
 
   // 3. Transition from Splash to Main Window
   mainWindow.once('ready-to-show', () => {
-    // Wait 3000ms (3 seconds) before switching windows
+    // Ensuring the window only shows once content is fully ready
     setTimeout(() => {
-      if (splash) {
+      if (splash && !splash.isDestroyed()) {
         splash.destroy(); 
       }
       mainWindow.show(); 
       mainWindow.maximize(); 
-    }, 1200); 
+    }, 1500); 
   });
 }
 
 app.whenReady().then(() => {
-  // Path to your bundled FastAPI engine
-  const backendPath = path.join(__dirname, '..', 'backend', 'dist', 'run_server', 'run_server.exe');
+  // CORRECTED PRODUCTION PATH LOGIC
+  // In production, electron-builder places extraResources in process.resourcesPath
+  const backendPath = app.isPackaged 
+    ? path.join(process.resourcesPath, 'run_server', 'run_server.exe') 
+    : path.join(__dirname, '..', 'backend', 'dist', 'run_server', 'run_server.exe');
   
+  console.log("Starting backend at:", backendPath);
+
   // Start backend process
-  backendProcess = execFile(backendPath);
+  backendProcess = execFile(backendPath, {
+    windowsHide: true,
+    cwd: path.dirname(backendPath) // Ensures relative paths in backend work correctly
+  }, (err) => {
+    if (err) console.error("Backend Error:", err);
+  });
   
   createWindow();
 });
 
 app.on('window-all-closed', () => {
-  // Clean up backend process on exit
-  if (backendProcess) backendProcess.kill();
+  // Robust cleanup of the backend process on exit
+  if (backendProcess) {
+    const { exec } = require('child_process');
+    exec('taskkill /F /IM run_server.exe /T'); 
+  }
   app.quit();
 });

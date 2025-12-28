@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { createMaintenance, getEquipments } from "../utils/api";
 
-// ⚠️ IMPORTANT: Do NOT put 'async' here!
 function AddMaintenanceForm({ onSuccess }) {
   const [equipmentList, setEquipmentList] = useState([]);
   
@@ -21,7 +20,6 @@ function AddMaintenanceForm({ onSuccess }) {
 
   // Load equipment list for dropdown
   useEffect(() => {
-    // We create an async function INSIDE useEffect
     const fetchEquip = async () => {
       try {
         const res = await getEquipments();
@@ -49,17 +47,25 @@ function AddMaintenanceForm({ onSuccess }) {
     try {
       if (!formData.equipment_id) throw new Error("Please select an equipment item.");
 
+      // ============================================================
+      // ⚠️ CRITICAL FIX: Handle Empty Dates
+      // ============================================================
+      // The backend will crash if we send "" (empty string) to a Date column.
+      // We must convert empty strings to 'null'.
       const payload = {
         ...formData,
         equipment_id: parseInt(formData.equipment_id),
-        // Convert cost to number if present, otherwise 0
-        cost: formData.cost ? parseFloat(formData.cost) : 0
+        // Convert cost to number, default to 0
+        cost: formData.cost ? parseFloat(formData.cost) : 0,
+        // Convert empty date strings to null
+        sent_for_repair_date: formData.sent_for_repair_date || null,
+        return_from_repair_date: formData.return_from_repair_date || null,
       };
 
       await createMaintenance(payload);
       alert("Maintenance record logged successfully!");
       
-      // Reset form
+      // Reset form to defaults
       setFormData({
         equipment_id: "",
         fault_description: "",
@@ -279,7 +285,9 @@ function AddMaintenanceForm({ onSuccess }) {
                 fontSize: '14px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                // SAFETY: Ensure this button is clickable in Electron
+                WebkitAppRegion: 'no-drag'
               }}
             >
               Cancel
@@ -299,7 +307,9 @@ function AddMaintenanceForm({ onSuccess }) {
                 boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
+                // SAFETY: Ensure this button is clickable in Electron
+                WebkitAppRegion: 'no-drag'
               }}
             >
               {loading ? "Saving..." : "Log Maintenance"}
@@ -311,7 +321,7 @@ function AddMaintenanceForm({ onSuccess }) {
   );
 }
 
-// Reuse styles from other forms for consistency
+// Styling Objects (with Electron safety added)
 const labelStyle = {
   display: "block",
   marginBottom: "8px",
@@ -332,7 +342,10 @@ const inputStyle = {
   fontWeight: "500",
   outline: "none",
   transition: "all 0.2s ease",
-  background: "#f8fafc"
+  background: "#f8fafc",
+  // SAFETY: Ensures inputs are clickable in Electron's frameless window
+  WebkitAppRegion: 'no-drag',
+  cursor: 'text'
 };
 
 export default AddMaintenanceForm;

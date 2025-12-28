@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { createIssueRecord, getEquipments } from "../utils/api";
 
 function AddIssueForm({ onSuccess }) {
-  // We store the list of available equipment here for the dropdown
   const [equipmentList, setEquipmentList] = useState([]);
   
   const [formData, setFormData] = useState({
@@ -52,11 +51,26 @@ function AddIssueForm({ onSuccess }) {
       if (!formData.equipment_id) {
         throw new Error("Please select an equipment item.");
       }
+      if (!formData.quantity || formData.quantity <= 0) {
+        throw new Error("Quantity must be at least 1.");
+      }
 
+      // Check availability locally before sending
+      const selectedItem = equipmentList.find(e => e.id === parseInt(formData.equipment_id));
+      if (selectedItem && parseInt(formData.quantity) > selectedItem.available_qty) {
+        throw new Error(`Only ${selectedItem.available_qty} items available.`);
+      }
+
+      // ⚠️ CRITICAL FIX: Convert Strings to Integers for Backend
       const payload = {
-        ...formData,
         equipment_id: parseInt(formData.equipment_id),
-        quantity: parseInt(formData.quantity)
+        issued_to: formData.issued_to,
+        issued_lab: formData.issued_lab,
+        quantity: parseInt(formData.quantity),
+        issue_date: formData.issue_date,
+        // Convert empty return_date to null
+        return_date: formData.return_date || null, 
+        status: "Issued"
       };
 
       await createIssueRecord(payload);
@@ -76,14 +90,23 @@ function AddIssueForm({ onSuccess }) {
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error("Error creating issue:", err);
-      // specific error handling
+      
+      // ⚠️ CRITICAL FIX: Prevent White Screen of Death
+      // We ensure 'msg' is ALWAYS a string. React crashes if we try to render an Object.
+      let msg = "Failed to create issue record.";
+      
       if (err.response && err.response.data && err.response.data.detail) {
-        setError(err.response.data.detail);
+        // If the backend sends a validation array/object, turn it into text
+        if (typeof err.response.data.detail === 'object') {
+            msg = "Validation Error: " + JSON.stringify(err.response.data.detail);
+        } else {
+            msg = err.response.data.detail;
+        }
       } else if (err.message) {
-        setError(err.message);
-      } else {
-        setError("Failed to create issue record.");
+        msg = err.message;
       }
+      
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -265,7 +288,8 @@ function AddIssueForm({ onSuccess }) {
                 fontSize: '14px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                WebkitAppRegion: 'no-drag' // Safety for Electron
               }}
             >
               Cancel
@@ -285,7 +309,8 @@ function AddIssueForm({ onSuccess }) {
                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
+                WebkitAppRegion: 'no-drag' // Safety for Electron
               }}
             >
               {loading ? "Processing..." : "Confirm Issue"}
@@ -318,7 +343,9 @@ const inputStyle = {
   fontWeight: "500",
   outline: "none",
   transition: "all 0.2s ease",
-  background: "#f8fafc"
+  background: "#f8fafc",
+  WebkitAppRegion: 'no-drag', // SAFETY: Make inputs clickable in Electron
+  cursor: 'text'
 };
 
 export default AddIssueForm;

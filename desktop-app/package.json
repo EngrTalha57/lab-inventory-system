@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "build": "electron-builder --win",
     "dist": "electron-builder"
   },
   "keywords": [],
@@ -35,20 +36,27 @@
       "shortcutName": "T&AS Inventory"
     },
     "files": [
-      "**/*",
+      "main.js",
       "splash.png",
-      "!backend/build/*",
-      "!backend/run_server.py",
-      "!backend/run_server.spec"
+      "icon.ico",
+      "package.json",
+      "!dist/*",
+      "!backend/*",
+      "!frontend/*"
     ],
-    "extraResources": [
-      {
-        "from": "../backend/dist/run_server",
-        "to": "backend/dist/run_server",
-        "filter": [
-          "**/*"
-        ]
-      }
+"extraResources": [
+  {
+    "from": "../backend/dist/run_server",
+    "to": "run_server",
+    "filter": [
+      "**/*",
+      "!inventory.db" 
     ]
+  },
+  {
+    "from": "../backend/inventory.db",
+    "to": "run_server/inventory.db"
+  }
+]
   }
 }

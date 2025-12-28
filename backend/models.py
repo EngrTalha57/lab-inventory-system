@@ -1,5 +1,5 @@
 # backend/models.py
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -67,5 +67,8 @@ class Maintenance(Base):
     return_from_repair_date = Column(String, nullable=True)
     status = Column(String, default="pending")            # pending / completed
     remarks = Column(String, nullable=True)
+    
+    # ✅ FIX: Added the missing Cost column
+    cost = Column(Float, default=0.0)
 
     equipment = relationship("Equipment", back_populates="maintenance_records")

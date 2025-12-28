@@ -384,3 +384,27 @@ body {
 .dark-mode input[type="checkbox"] + label {
   color: #cbd5e1 !important;
 }
+
+/* =========================================
+   7. CRITICAL ELECTRON FIXES (Must be at bottom)
+   ========================================= */
+
+/* These rules prevent the "Frameless Window" drag behavior 
+   from blocking clicks on your form inputs.
+*/
+
+/* Force all interactive elements to be non-draggable and clickable */
+input, 
+textarea, 
+select, 
+button, 
+.clickable, 
+.form-control, 
+.react-datepicker-wrapper, 
+.react-datepicker__input-container input {
+  -webkit-app-region: no-drag !important;
+  cursor: text !important;
+  pointer-events: auto !important;
+  z-index: 9999; /* Force them on top */
+}
+

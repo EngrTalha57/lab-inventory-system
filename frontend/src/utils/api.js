@@ -1,10 +1,12 @@
-// frontend/src/utils/api.js
 import axios from 'axios';
 
-// Leave empty because Vite Proxy forwards requests to port 8000
-const API_BASE_URL = '';
+/**
+ * ✅ FIX 1: POINT TO BACKEND PORT 8000
+ * Directs requests to the FastAPI server. This stops the 404/CORS errors 
+ * seen when Vite tries to find the API on port 5137.
+ */
+const API_URL = "https://EngrTalha57.pythonanywhere.com";
 
-// Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true, 
@@ -13,7 +15,11 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add token
+/**
+ * ✅ REQUEST INTERCEPTOR
+ * Automatically attaches the JWT 'Bearer' token to the headers of every 
+ * request to avoid 401 Unauthorized errors.
+ */
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -25,26 +31,26 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle token expiration and auto-login
+/**
+ * ✅ RESPONSE INTERCEPTOR
+ * Handles token expiration. If a 401 error occurs, it attempts to use 
+ * the 'remember_token' cookie to log the user back in automatically.
+ */
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // If error is 401 (Unauthorized) and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      
       const hasRememberToken = document.cookie.includes('remember_token');
       
       if (hasRememberToken) {
         try {
           const autoLoginResponse = await autoLogin();
-          
           if (autoLoginResponse.access_token) {
             localStorage.setItem('token', autoLoginResponse.access_token);
             localStorage.setItem('user', JSON.stringify(autoLoginResponse.user));
-            
             originalRequest.headers.Authorization = `Bearer ${autoLoginResponse.access_token}`;
             return api(originalRequest);
           }
@@ -152,35 +158,42 @@ export const initializeAuth = async () => {
 };
 
 
-// =============== DATA API FUNCTIONS (With Aliases) ===============
-// This section fixes the "does not provide an export named..." errors
-// by providing multiple names for the same function.
+// =============== DATA API FUNCTIONS ===============
 
 // --- EQUIPMENT ---
 export const getEquipments = () => api.get('/equipments');
 export const getEquipment = (id) => api.get(`/equipments/${id}`);
 export const createEquipment = (data) => api.post('/equipments', data);
-export const addEquipment = createEquipment; // Alias for compatibility
+export const addEquipment = createEquipment; 
 export const updateEquipment = (id, data) => api.put(`/equipments/${id}`, data);
 export const deleteEquipment = (id) => api.delete(`/equipments/${id}`);
 
+/**
+ * ✅ FIX 3: EXPORT CSV (RESOLVE ZERO QUANTITY ISSUE)
+ * This calls the specific mapped endpoint in the backend.
+ */
+export const exportEquipmentCSV = () => {
+  const token = localStorage.getItem('token');
+  // Use 'access_token' parameter so the backend dependency can find it
+  const url = `http://127.0.0.1:8000/equipment/export-csv?access_token=${token}`;
+  window.open(url, '_blank');
+};
+
 // --- ISSUES ---
 export const getIssues = () => api.get('/issues');
-export const createIssue = (data) => api.post('/issues', data);
-export const addIssue = createIssue; // Alias
-export const createIssueRecord = createIssue; // Alias
-export const updateIssue = (id, data) => api.put(`/issues/${id}`, data); // ✅ Used by EditModal
-export const updateIssueRecord = updateIssue; // Alias
+export const createIssueRecord = (data) => api.post('/issues', data); 
+export const createIssue = createIssueRecord; 
+export const addIssue = createIssueRecord; 
+export const updateIssue = (id, data) => api.put(`/issues/${id}`, data);
+export const updateIssueRecord = updateIssue; 
 export const deleteIssue = (id) => api.delete(`/issues/${id}`);
-export const deleteIssueRecord = deleteIssue; // Alias
+export const deleteIssueRecord = deleteIssue; 
 
 // --- MAINTENANCE ---
 export const getMaintenance = () => api.get('/maintenance');
 export const createMaintenance = (data) => api.post('/maintenance', data);
-export const addMaintenance = createMaintenance; // Alias
+export const addMaintenance = createMaintenance; 
 export const updateMaintenance = (id, data) => api.put(`/maintenance/${id}`, data);
 export const deleteMaintenance = (id) => api.delete(`/maintenance/${id}`);
 
 export default api;
-
-

@@ -1,7 +1,8 @@
 // frontend/src/components/Dashboard.jsx
 import React, { useState } from "react";
 import EquipmentTable from "./EquipmentTable"; 
-
+import { getEquipments, getIssueRecords, getMaintenanceRecords } from "../utils/api";
+// ... imports for components ...
 // --- Stat Card Component ---
 const StatCard = ({ title, value, icon }) => (
   <div style={{
@@ -127,19 +128,28 @@ const Dashboard = ({
   });
 
   // --- CSV EXPORT FUNCTION ---
-  const exportToCSV = () => {
-    let dataToExport = [];
-    let headers = [];
-    let filename = "report.csv";
+// --- Updated CSV EXPORT FUNCTION in Dashboard.jsx ---
+const exportToCSV = () => {
+  let dataToExport = [];
+  let headers = [];
+  let filename = "report.csv";
 
-    if (activeTab === "equipment") {
-      filename = "Equipment_Inventory.csv";
-      headers = ["ID", "Name", "Code", "Category", "Lab", "Total Qty", "Available", "Status"];
-      dataToExport = filteredEquipment.map(item => [
-        item.id, `"${item.name || item.equipment_name || ''}"`, item.code || '', 
-        item.category || '', item.lab || '', item.total_quantity || 0, 
-        item.available_quantity || 0, item.status || ''
-      ]);
+  if (activeTab === "equipment") {
+    filename = "Equipment_Inventory.csv";
+    headers = ["ID", "Name", "Code", "Category", "Lab", "Total Qty", "Available", "Status"];
+    dataToExport = filteredEquipment.map(item => [
+      item.id, 
+      `"${item.name || item.equipment_name || ''}"`, 
+      item.code || '', 
+      item.category || '', 
+      item.lab || '', 
+      // ✅ FIX: Change item.total_quantity to item.total_qty
+      item.total_qty || 0, 
+      // ✅ FIX: Change item.available_quantity to item.available_qty
+      item.available_qty || 0, 
+      item.status || ''
+    ]);
+  // ... rest of the function remains same
     } else if (activeTab === "issues") {
       filename = "Issue_Records.csv";
       headers = ["ID", "Asset ID", "Issued To", "Lab", "Qty", "Date Issued", "Return Date", "Status"];

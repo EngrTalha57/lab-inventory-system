@@ -1,9 +1,11 @@
 from pydantic import BaseModel, EmailStr, validator
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 import re
 
-# ------------- Authentication Schemas -------------
+# ==========================================
+#  AUTHENTICATION & USER SCHEMAS
+# ==========================================
 
 class UserBase(BaseModel):
     username: str
@@ -86,15 +88,17 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 
-# ------------- Equipment Schemas -------------
+# ==========================================
+#  EQUIPMENT SCHEMAS
+# ==========================================
 
 class EquipmentBase(BaseModel):
     name: str
     code: str
     category: Optional[str] = None
     lab: Optional[str] = None
-    total_qty: int # ✅ Matches CRUD and main.py
-    available_qty: int # ✅ Matches CRUD and main.py
+    total_qty: int 
+    available_qty: int 
     status: str
 
 class EquipmentCreate(EquipmentBase):
@@ -116,14 +120,16 @@ class Equipment(EquipmentBase):
         from_attributes = True
 
 
-# ------------- Issue Record Schemas -------------
+# ==========================================
+#  ISSUE RECORD SCHEMAS
+# ==========================================
 
 class IssueRecordBase(BaseModel):
     issued_to: str
     issued_lab: str
     quantity: int
-    issue_date: str
-    return_date: Optional[str] = None
+    issue_date: date  # Changed to 'date' for better validation
+    return_date: Optional[date] = None
     status: str = "issued"
 
 class IssueRecordCreate(IssueRecordBase):
@@ -137,16 +143,18 @@ class IssueRecord(IssueRecordBase):
         from_attributes = True
 
 
-# ------------- Maintenance Schemas -------------
+# ==========================================
+#  MAINTENANCE SCHEMAS (UPDATED)
+# ==========================================
 
 class MaintenanceBase(BaseModel):
     fault_description: str
-    fault_date: str
-    sent_for_repair_date: Optional[str] = None
-    return_from_repair_date: Optional[str] = None
+    fault_date: date  # Using 'date' ensures the string "YYYY-MM-DD" is valid
+    sent_for_repair_date: Optional[date] = None
+    return_from_repair_date: Optional[date] = None
     status: str = "pending"
     remarks: Optional[str] = None
-    cost: float = 0.0 # ✅ Matches updated AddMaintenanceForm
+    cost: float = 0.0  # ✅ REQUIRED: Matches the new column in models.py
 
 class MaintenanceCreate(MaintenanceBase):
     equipment_id: int
@@ -157,4 +165,3 @@ class Maintenance(MaintenanceBase):
 
     class Config:
         from_attributes = True
-     
