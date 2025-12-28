@@ -5,7 +5,7 @@ import axios from 'axios';
  * Directs requests to the FastAPI server. This stops the 404/CORS errors 
  * seen when Vite tries to find the API on port 5137.
  */
-const API_URL = "https://EngrTalha57.pythonanywhere.com";
+const API_BASE_URL = "https://EngrTalha57.pythonanywhere.com";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
