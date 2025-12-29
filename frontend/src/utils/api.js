@@ -1,9 +1,8 @@
 import axios from 'axios';
 
 /**
- * ✅ FIX 1: POINT TO BACKEND PORT 8000
- * Directs requests to the FastAPI server. This stops the 404/CORS errors 
- * seen when Vite tries to find the API on port 5137.
+ * ✅ FIX 1: POINT TO PRODUCTION BACKEND
+ * This matches your PythonAnywhere URL.
  */
 const API_BASE_URL = "https://EngrTalha57.pythonanywhere.com";
 
@@ -17,8 +16,7 @@ const api = axios.create({
 
 /**
  * ✅ REQUEST INTERCEPTOR
- * Automatically attaches the JWT 'Bearer' token to the headers of every 
- * request to avoid 401 Unauthorized errors.
+ * Automatically attaches the JWT 'Bearer' token to the headers of every request.
  */
 api.interceptors.request.use(
   (config) => {
@@ -33,8 +31,7 @@ api.interceptors.request.use(
 
 /**
  * ✅ RESPONSE INTERCEPTOR
- * Handles token expiration. If a 401 error occurs, it attempts to use 
- * the 'remember_token' cookie to log the user back in automatically.
+ * Handles token expiration and auto-login.
  */
 api.interceptors.response.use(
   (response) => response,
@@ -106,6 +103,7 @@ export const logout = async () => {
     console.error('Logout error:', error);
   } finally {
     clearAuthData();
+    // Clear cookies
     document.cookie.split(";").forEach((c) => {
       document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
@@ -169,14 +167,31 @@ export const updateEquipment = (id, data) => api.put(`/equipments/${id}`, data);
 export const deleteEquipment = (id) => api.delete(`/equipments/${id}`);
 
 /**
- * ✅ FIX 3: EXPORT CSV (RESOLVE ZERO QUANTITY ISSUE)
- * This calls the specific mapped endpoint in the backend.
+ * ✅ FIX 3: EXPORT CSV (SECURE DOWNLOAD)
+ * We use 'api.get' with 'blob' type to ensure Headers (Auth Token) are sent.
+ * window.open() DOES NOT send tokens, so it would fail with 401.
  */
-export const exportEquipmentCSV = () => {
-  const token = localStorage.getItem('token');
-  // Use 'access_token' parameter so the backend dependency can find it
-  const url = `http://127.0.0.1:8000/equipment/export-csv?access_token=${token}`;
-  window.open(url, '_blank');
+export const exportEquipmentCSV = async () => {
+  try {
+    const response = await api.get('/equipment/export-csv', {
+      responseType: 'blob', // Important: Treat response as a file
+    });
+
+    // Create a temporary URL to trigger the download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'verified_inventory.csv');
+    document.body.appendChild(link);
+    link.click();
+    
+    // Cleanup
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Export failed:", error);
+    alert("Failed to download CSV. You may not be logged in.");
+  }
 };
 
 // --- ISSUES ---

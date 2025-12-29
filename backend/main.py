@@ -30,7 +30,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Department Lab Inventory API",
-    version="2.4.0"
+    version="2.5.0"
 )
 
 # ==========================================
@@ -59,17 +59,21 @@ def startup_populate():
         db.close()
 
 # ==========================================
-#  CORS CONFIGURATION (Security Fix)
+#  CORS CONFIGURATION (UPDATED FIX)
 # ==========================================
 
 origins = [
-    "http://localhost:5173",  # For local testing
+    "http://localhost:5173",
     "http://localhost:3000",
-    "https://lab-inventory-system-nu.vercel.app" # <--- YOUR VERCEL APP URL
+    "http://127.0.0.1:5173",
+    "https://lab-inventory-system-nu.vercel.app",       # Exact match
+    "https://lab-inventory-system-nu.vercel.app/",      # WITH trailing slash (Vital for some browsers)
+    "https://www.lab-inventory-system-nu.vercel.app"    # With www just in case
 ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # We use the specific list, NOT ["*"]
+    allow_origins=origins, 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -109,7 +113,7 @@ def delete_equipment(equipment_id: int, db: Session = Depends(get_db), current_u
     return {"detail": "Equipment deleted"}
 
 # ==========================================
-#  MAINTENANCE ENDPOINTS (FIXED)
+#  MAINTENANCE ENDPOINTS
 # ==========================================
 
 @app.get("/maintenance", response_model=List[schemas.Maintenance])
@@ -124,7 +128,6 @@ def create_maintenance(maint_in: schemas.MaintenanceCreate, db: Session = Depend
         print(f"CRITICAL MAINTENANCE ERROR: {e}")
         raise HTTPException(status_code=400, detail=f"Database Error: {str(e)}")
 
-# ✅ FIX: Added Update (PUT) Endpoint for Maintenance
 @app.put("/maintenance/{maintenance_id}", response_model=schemas.Maintenance)
 def update_maintenance(maintenance_id: int, maint_in: schemas.MaintenanceCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     db_item = db.query(models.Maintenance).filter(models.Maintenance.id == maintenance_id).first()
@@ -139,7 +142,6 @@ def update_maintenance(maintenance_id: int, maint_in: schemas.MaintenanceCreate,
     db.refresh(db_item)
     return db_item
 
-# ✅ FIX: Added Delete (DELETE) Endpoint for Maintenance
 @app.delete("/maintenance/{maintenance_id}")
 def delete_maintenance(maintenance_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     db_item = db.query(models.Maintenance).filter(models.Maintenance.id == maintenance_id).first()
